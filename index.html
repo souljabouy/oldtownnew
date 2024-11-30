@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Old Town Inn - Modern Comfort in Historic Setting</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="images/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/icons/apple-touch-icon.png">
+    
+    <title>Old Twon Inn - Modern Comfort in Historic Setting</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">Old Town Inn</div>
+        <div class="logo">
+            <img src="images/Asset1.png" alt="Old Town Inn Logo" class="logo-img">
+        </div>
         <ul class="nav-links">
             <li><a href="#home" class="active">Home</a></li>
             <li><a href="#about">About</a></li>
@@ -21,6 +30,21 @@
 
     <div id="content"></div>
 
+    <!-- First load Google Maps API -->
+    <script>
+        function initMap() {
+            console.log('Google Maps API loaded successfully');
+            // After API is loaded, initialize your tests
+            if (typeof testGooglePlacesAPI === 'function') {
+                testGooglePlacesAPI();
+            }
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA5-hxCYDXx9Lrx1ZIkBW5cBDdc0hi8-Lg&libraries=places&callback=initMap" async defer></script>
+    
+    <!-- Then load your scripts -->
     <script src="js/main.js"></script>
+    <script src="js/reviews.js"></script>
+    <script src="js/test-api.js"></script>
 </body>
 </html>
