@@ -245,185 +245,181 @@ class Gallery {
 class Slideshow {
     constructor() {
         this.images = [
-            'images/hotel1.jpg',
-            'images/hotel2.jpg',
-            'images/hotel3.jpg',
-            'images/hotel4.jpg',
-            'images/hotel5.jpg'
+            'images/home_slides/asset1.png',
+            'images/home_slides/asset2.png',
+            'images/home_slides/asset3.jpg',
+            'images/home_slides/asset4.png'
         ];
         this.currentIndex = 0;
         this.isAnimating = false;
-        this.touchStartX = 0;
         this.slideTrack = document.querySelector('.slide-track');
         this.indicatorsContainer = document.querySelector('.slide-indicators');
+        this.autoplayInterval = null;
+        this.touchStartX = 0;
+        this.touchStartY = 0;
         
         this.init();
     }
 
     init() {
-        // Create slides
         this.createSlides();
-        
-        // Create indicators
         this.createIndicators();
-        
-        // Add event listeners
-        this.addEventListeners();
-        
-        // Start autoplay
+        this.setupEventListeners();
         this.startAutoplay();
+    }
+
+    smoothSlide(from, to, duration = 600) {
+        if (this.isAnimating) return;
+        this.isAnimating = true;
+
+        const startTime = performance.now();
+        const slideTrack = this.slideTrack;
+
+        // Modern easing function for smooth motion
+        const easeOutExpo = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            let progress = Math.min(elapsed / duration, 1);
+
+            // Apply easing
+            const easedProgress = easeOutExpo(progress);
+            
+            // Calculate current position
+            const currentPosition = from + (to - from) * easedProgress;
+            
+            // Apply transform with hardware acceleration
+            slideTrack.style.transform = `translate3d(${currentPosition}%, 0, 0)`;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.isAnimating = false;
+                this.handleSlideComplete();
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    handleSlideComplete() {
+        // Handle infinite scroll wrap-around
+        if (this.currentIndex >= this.images.length) {
+            this.currentIndex = 0;
+            this.slideTrack.style.transform = `translate3d(0%, 0, 0)`;
+        } else if (this.currentIndex < 0) {
+            this.currentIndex = this.images.length - 1;
+            const finalPosition = -(this.currentIndex * 100);
+            this.slideTrack.style.transform = `translate3d(${finalPosition}%, 0, 0)`;
+        }
         
-        // Initial position
-        this.updateSlidePosition();
+        this.updateIndicators();
     }
 
-    createSlides() {
-        // Create a copy of first and last slides for infinite effect
-        const allSlides = [
-            this.images[this.images.length - 1],
-            ...this.images,
-            this.images[0]
-        ];
-
-        allSlides.forEach((src, index) => {
-            const slide = document.createElement('div');
-            slide.className = 'slide';
-            
-            const img = document.createElement('img');
-            img.src = src;
-            img.alt = `Slide ${index}`;
-            img.style.objectFit = 'contain'; // Ensure the full image is seen
-            img.style.width = '100%'; // Adjust width to fit container
-            img.style.height = '100%'; // Adjust height to fit container
-            
-            slide.appendChild(img);
-            this.slideTrack.appendChild(slide);
-        });
+    nextSlide() {
+        if (this.isAnimating) return;
+        
+        const fromPosition = -(this.currentIndex * 100);
+        this.currentIndex++;
+        const toPosition = -(this.currentIndex * 100);
+        
+        this.smoothSlide(fromPosition, toPosition);
     }
 
-    createIndicators() {
-        this.images.forEach((_, index) => {
-            const indicator = document.createElement('div');
-            indicator.className = `indicator ${index === 0 ? 'active' : ''}`;
-            indicator.addEventListener('click', () => this.goToSlide(index));
-            this.indicatorsContainer.appendChild(indicator);
-        });
+    prevSlide() {
+        if (this.isAnimating) return;
+        
+        const fromPosition = -(this.currentIndex * 100);
+        this.currentIndex--;
+        const toPosition = -(this.currentIndex * 100);
+        
+        this.smoothSlide(fromPosition, toPosition);
     }
 
-    addEventListeners() {
-        // Navigation buttons
-        document.querySelector('.nav-btn.prev').addEventListener('click', () => this.prevSlide());
-        document.querySelector('.nav-btn.next').addEventListener('click', () => this.nextSlide());
-
-        // Touch events
+    setupEventListeners() {
+        // Touch handling with improved sensitivity
         this.slideTrack.addEventListener('touchstart', (e) => {
             this.touchStartX = e.touches[0].clientX;
+            this.touchStartY = e.touches[0].clientY;
             this.stopAutoplay();
-        });
+            
+            // Prepare for potential drag
+            this.slideTrack.style.transition = 'none';
+        }, { passive: true });
 
         this.slideTrack.addEventListener('touchmove', (e) => {
             if (this.isAnimating) return;
+
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
             
-            const touchCurrentX = e.touches[0].clientX;
-            const diff = this.touchStartX - touchCurrentX;
-            const offset = -((this.currentIndex + 1) * 100 + (diff / this.slideTrack.clientWidth) * 100);
-            
-            this.slideTrack.style.transform = `translateX(${offset}%)`;
+            // Calculate deltas
+            const deltaX = this.touchStartX - touchX;
+            const deltaY = this.touchStartY - touchY;
+
+            // Check if scrolling is more horizontal than vertical
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                e.preventDefault();
+                
+                const currentOffset = -(this.currentIndex * 100);
+                const moveOffset = (deltaX / window.innerWidth) * 100;
+                const newPosition = currentOffset - moveOffset;
+                
+                this.slideTrack.style.transform = `translate3d(${newPosition}%, 0, 0)`;
+            }
         });
 
         this.slideTrack.addEventListener('touchend', (e) => {
             const touchEndX = e.changedTouches[0].clientX;
-            const diff = this.touchStartX - touchEndX;
+            const deltaX = this.touchStartX - touchEndX;
+            const threshold = window.innerWidth * 0.2; // 20% of screen width
 
-            if (Math.abs(diff) > 50) {
-                if (diff > 0) this.nextSlide();
-                else this.prevSlide();
+            if (Math.abs(deltaX) > threshold) {
+                if (deltaX > 0) {
+                    this.nextSlide();
+                } else {
+                    this.prevSlide();
+                }
             } else {
-                this.updateSlidePosition();
+                // Snap back to current slide
+                const currentPosition = -(this.currentIndex * 100);
+                this.smoothSlide(currentPosition, currentPosition);
             }
 
             this.startAutoplay();
         });
 
-        // Pause autoplay on hover
-        this.slideTrack.addEventListener('mouseenter', () => this.stopAutoplay());
-        this.slideTrack.addEventListener('mouseleave', () => this.startAutoplay());
+        // Navigation buttons
+        document.querySelector('.prev').addEventListener('click', () => {
+            this.stopAutoplay();
+            this.prevSlide();
+            this.startAutoplay();
+        });
+
+        document.querySelector('.next').addEventListener('click', () => {
+            this.stopAutoplay();
+            this.nextSlide();
+            this.startAutoplay();
+        });
     }
 
-    updateSlidePosition(animate = true) {
-        if (animate) {
-            this.slideTrack.style.transition = 'transform 0.5s ease-out';
-        } else {
-            this.slideTrack.style.transition = 'none';
+    startAutoplay() {
+        if (this.autoplayInterval) clearInterval(this.autoplayInterval);
+        this.autoplayInterval = setInterval(() => this.nextSlide(), 3000);
+    }
+
+    stopAutoplay() {
+        if (this.autoplayInterval) {
+            clearInterval(this.autoplayInterval);
+            this.autoplayInterval = null;
         }
+    }
 
-        const offset = -((this.currentIndex + 1) * 100);
-        this.slideTrack.style.transform = `translateX(${offset}%)`;
-
-        // Update indicators
+    updateIndicators() {
         const indicators = this.indicatorsContainer.querySelectorAll('.indicator');
         indicators.forEach((indicator, index) => {
             indicator.classList.toggle('active', index === this.currentIndex);
         });
-    }
-
-    nextSlide() {
-        if (this.isAnimating) return;
-        this.isAnimating = true;
-        this.currentIndex++;
-
-        if (this.currentIndex >= this.images.length) {
-            this.handleInfiniteScroll('next');
-        } else {
-            this.updateSlidePosition();
-        }
-    }
-
-    prevSlide() {
-        if (this.isAnimating) return;
-        this.isAnimating = true;
-        this.currentIndex--;
-
-        if (this.currentIndex < 0) {
-            this.handleInfiniteScroll('prev');
-        } else {
-            this.updateSlidePosition();
-        }
-    }
-
-    handleInfiniteScroll(direction) {
-        this.updateSlidePosition();
-
-        this.slideTrack.addEventListener('transitionend', () => {
-            this.slideTrack.style.transition = 'none';
-            
-            if (direction === 'next') {
-                this.currentIndex = 0;
-            } else {
-                this.currentIndex = this.images.length - 1;
-            }
-            
-            this.updateSlidePosition(false);
-            
-            setTimeout(() => {
-                this.slideTrack.style.transition = 'transform 0.5s ease-out';
-                this.isAnimating = false;
-            }, 10);
-        }, { once: true });
-    }
-
-    goToSlide(index) {
-        if (this.isAnimating || index === this.currentIndex) return;
-        this.currentIndex = index;
-        this.updateSlidePosition();
-    }
-
-    startAutoplay() {
-        this.autoplayInterval = setInterval(() => this.nextSlide(), 5000);
-    }
-
-    stopAutoplay() {
-        clearInterval(this.autoplayInterval);
     }
 }
 
