@@ -10,18 +10,45 @@ const images = [
 let currentImageIndex = 0;
 
 function initializeSlideshow() {
-    const slideshow = document.querySelector('.slideshow');
-    if (slideshow) {
-        function changeBackground() {
-            slideshow.style.backgroundImage = `url(${images[currentImageIndex]})`;
-            slideshow.style.backgroundSize = 'cover'; // Fill the whole container
-            slideshow.style.backgroundRepeat = 'no-repeat'; // Prevent image repetition
-            slideshow.style.backgroundPosition = 'center'; // Center the image
-            currentImageIndex = (currentImageIndex + 1) % images.length;
-        }
-        changeBackground();
-        setInterval(changeBackground, 5000);
+    const slideTrack = document.querySelector('.slide-track');
+    const images = [
+        '../images/home_slides/asset1.png',
+        '../images/home_slides/asset2.png',
+        '../images/home_slides/asset3.jpg',
+        '../images/home_slides/asset4.png',
+        '../images/home_slides/asset5.jpg'
+    ];
+
+    // Clear any existing content
+    slideTrack.innerHTML = '';
+
+    // Create slides
+    images.forEach((imagePath, index) => {
+        const slide = document.createElement('div');
+        slide.className = `slide ${index === 0 ? 'active' : ''}`;
+        const img = document.createElement('img');
+        img.src = imagePath;
+        img.alt = 'Hotel Image';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        slide.appendChild(img);
+        slideTrack.appendChild(slide);
+    });
+
+    let currentSlide = 0;
+    const slides = slideTrack.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+
+    // Function to show next slide
+    function showNextSlide() {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + 1) % totalSlides;
+        slides[currentSlide].classList.add('active');
     }
+
+    // Start the slideshow
+    setInterval(showNextSlide, 3000); // Change slide every 3 seconds
 }
 
 // Load all sections
@@ -423,6 +450,37 @@ class Slideshow {
     }
 }
 
+function initializeActivitiesScroll() {
+    const container = document.querySelector('.overflow-x-auto');
+    const scrollLeftBtn = document.querySelector('[aria-label="Scroll left"]');
+    const scrollRightBtn = document.querySelector('[aria-label="Scroll right"]');
+    
+    if (!container || !scrollLeftBtn || !scrollRightBtn) return;
+
+    const scrollAmount = 320; // Width of one card
+
+    scrollLeftBtn.addEventListener('click', () => {
+        container.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    scrollRightBtn.addEventListener('click', () => {
+        container.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    // Optional: Hide/show scroll buttons based on scroll position
+    container.addEventListener('scroll', () => {
+        scrollLeftBtn.classList.toggle('hidden', container.scrollLeft === 0);
+        scrollRightBtn.classList.toggle('hidden', 
+            container.scrollLeft >= container.scrollWidth - container.clientWidth);
+    });
+}
+
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     loadSections().then(() => {
@@ -447,5 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
         handleContactForm();
         new Gallery();
         new Slideshow();
+        initializeActivitiesScroll();
     });
 });

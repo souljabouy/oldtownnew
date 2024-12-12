@@ -1,105 +1,96 @@
-class ActivitySlider {
-    constructor() {
-        this.currentIndex = 0;
-        this.track = document.querySelector('.activities-track');
-        this.cards = Array.from(this.track.children);
-        this.prevBtn = document.querySelector('.nav-btn.prev');
-        this.nextBtn = document.querySelector('.nav-btn.next');
-        this.progressBar = document.querySelector('.progress-bar');
-        this.cardsPerView = this.getCardsPerView();
-        this.totalSlides = Math.ceil(this.cards.length / this.cardsPerView);
-        
-        this.init();
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait a bit for the content to be fully loaded
+    setTimeout(() => {
+        const scrollContainer = document.querySelector('.activities-track');
+        const prevButton = document.querySelector('.scroll-button.prev');
+        const nextButton = document.querySelector('.scroll-button.next');
 
-    init() {
-        if (!this.track || !this.prevBtn || !this.nextBtn) return;
-        
-        // Set initial state
-        this.updateButtons();
-        this.addEventListeners();
-        this.updateProgress();
-    }
-
-    getCardsPerView() {
-        if (window.innerWidth > 1200) return 3;
-        if (window.innerWidth > 768) return 2;
-        return 1;
-    }
-
-    slide(direction) {
-        const cardWidth = 100 / this.cardsPerView;
-        
-        if (direction === 'next' && this.currentIndex < this.totalSlides - 1) {
-            this.currentIndex++;
-        } else if (direction === 'prev' && this.currentIndex > 0) {
-            this.currentIndex--;
+        if (!scrollContainer || !prevButton || !nextButton) {
+            console.error('Required elements not found');
+            return;
         }
 
-        const translateX = -(this.currentIndex * cardWidth);
-        this.track.style.transform = `translateX(${translateX}%)`;
-        
-        this.updateButtons();
-        this.updateProgress();
-    }
+        // Calculate the width to scroll (one card width + gap)
+        const cardWidth = scrollContainer.querySelector('.activity-card').offsetWidth;
+        const gap = 32; // 2rem gap
+        const scrollDistance = cardWidth + gap;
 
-    updateButtons() {
-        // Update prev button
-        this.prevBtn.disabled = this.currentIndex === 0;
-        this.prevBtn.style.opacity = this.currentIndex === 0 ? '0.5' : '1';
-        this.prevBtn.style.pointerEvents = this.currentIndex === 0 ? 'none' : 'auto';
-
-        // Update next button
-        const isLastSlide = this.currentIndex === this.totalSlides - 1;
-        this.nextBtn.disabled = isLastSlide;
-        this.nextBtn.style.opacity = isLastSlide ? '0.5' : '1';
-        this.nextBtn.style.pointerEvents = isLastSlide ? 'none' : 'auto';
-    }
-
-    updateProgress() {
-        if (!this.progressBar) return;
-        const progress = ((this.currentIndex + 1) / this.totalSlides) * 100;
-        this.progressBar.style.setProperty('--progress', `${progress}%`);
-    }
-
-    addEventListeners() {
-        // Navigation buttons
-        this.prevBtn.addEventListener('click', () => this.slide('prev'));
-        this.nextBtn.addEventListener('click', () => this.slide('next'));
-
-        // Window resize
-        window.addEventListener('resize', () => {
-            const newCardsPerView = this.getCardsPerView();
-            if (newCardsPerView !== this.cardsPerView) {
-                this.cardsPerView = newCardsPerView;
-                this.totalSlides = Math.ceil(this.cards.length / this.cardsPerView);
-                this.currentIndex = Math.min(this.currentIndex, this.totalSlides - 1);
-                this.slide('current');
-            }
+        // Scroll to previous cards
+        prevButton.addEventListener('click', () => {
+            console.log('Prev button clicked');
+            scrollContainer.scrollBy({
+                left: -scrollDistance,
+                behavior: 'smooth'
+            });
         });
 
-        // Touch events
+        // Scroll to next cards
+        nextButton.addEventListener('click', () => {
+            console.log('Next button clicked');
+            scrollContainer.scrollBy({
+                left: scrollDistance,
+                behavior: 'smooth'
+            });
+        });
+
+        // Add touch scrolling for mobile
+        let isDown = false;
         let startX;
-        this.track.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
+        let scrollLeft;
+
+        scrollContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            scrollContainer.style.cursor = 'grabbing';
+            startX = e.pageX - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
         });
 
-        this.track.addEventListener('touchend', (e) => {
-            const endX = e.changedTouches[0].clientX;
-            const diff = startX - endX;
+        scrollContainer.addEventListener('mouseleave', () => {
+            isDown = false;
+            scrollContainer.style.cursor = 'grab';
+        });
 
-            if (Math.abs(diff) > 50) { // Minimum swipe distance
-                if (diff > 0) {
-                    this.slide('next');
-                } else {
-                    this.slide('prev');
-                }
+        scrollContainer.addEventListener('mouseup', () => {
+            isDown = false;
+            scrollContainer.style.cursor = 'grab';
+        });
+
+        scrollContainer.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 2;
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        });
+
+        // Update button visibility based on scroll position
+        function updateScrollButtons() {
+            const isAtStart = scrollContainer.scrollLeft <= 0;
+            const isAtEnd = scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth;
+
+            prevButton.style.opacity = isAtStart ? '0.3' : '1';
+            nextButton.style.opacity = isAtEnd ? '0.3' : '1';
+            
+            prevButton.disabled = isAtStart;
+            nextButton.disabled = isAtEnd;
+        }
+
+        // Add scroll event listener to update button visibility
+        scrollContainer.addEventListener('scroll', updateScrollButtons);
+        
+        // Update buttons on window resize
+        window.addEventListener('resize', updateScrollButtons);
+        
+        // Initial check for button visibility
+        updateScrollButtons();
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                prevButton.click();
+            } else if (e.key === 'ArrowRight') {
+                nextButton.click();
             }
         });
-    }
-}
-
-// Initialize the slider when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new ActivitySlider();
+    }, 100); // Small delay to ensure content is loaded
 });
